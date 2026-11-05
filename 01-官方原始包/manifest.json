@@ -1,0 +1,57 @@
+﻿[
+    {
+        "name":  "engine-multiplatform",
+        "desc":  "996传奇引擎多端版 引擎下载 181MB",
+        "url":  "https://996box-static.oss-accelerate.aliyuncs.com/offical/static/app/1779353415000_4FARj.zip",
+        "file":  "engine-multiplatform.zip",
+        "bytes":  190257431,
+        "expect":  190257431,
+        "sizeOk":  true,
+        "sha256":  "521F5FBA9EA19EA69802D9F36B4F5D978A8FDB460F919B2203E059953965F525",
+        "curlExit":  0
+    },
+    {
+        "name":  "version-pack",
+        "desc":  "996传奇引擎多端版 版本下载 256MB",
+        "url":  "https://996box-static.oss-accelerate.aliyuncs.com/offical/static/app/1754556555000_Jfxzk.zip",
+        "file":  "version-pack.zip",
+        "bytes":  269058107,
+        "expect":  269058107,
+        "sizeOk":  true,
+        "sha256":  "11048CEFD7EF1E7F4F3ECE0E44B29AF1D4707532104ADF44B5B1AC5CDB65CC25",
+        "curlExit":  0
+    },
+    {
+        "name":  "client-android",
+        "desc":  "996 安卓客户端 139MB",
+        "url":  "https://static.dhsf.huiyuehz.com/Package/promote/57e449b0ec916028fb7912ea6299e8b0.apk?v=1755227736",
+        "file":  "client-android.apk",
+        "bytes":  145631721,
+        "expect":  145631721,
+        "sizeOk":  true,
+        "sha256":  "AF203508D5CD8EFB222050A0BC48B0ACA067C33C17571C174FB23817DB090175",
+        "curlExit":  0
+    },
+    {
+        "name":  "client-pc",
+        "desc":  "996 多端 PC 客户端 124MB",
+        "url":  "https://996box-static.oss-accelerate.aliyuncs.com/offical/static/app/1753782511000_85F6K.rar",
+        "file":  "client-pc.rar",
+        "bytes":  130441568,
+        "expect":  130441568,
+        "sizeOk":  true,
+        "sha256":  "026DC76DA563C0CECF629B3642948DCE444A96B84CF22EC65217318BCA307991",
+        "curlExit":  0
+    },
+    {
+        "name":  "hub",
+        "desc":  "996 HUB 6.8MB",
+        "url":  "https://996box-static.oss-accelerate.aliyuncs.com/offical/static/app/1779353368000_zemTE.zip",
+        "file":  "hub.zip",
+        "bytes":  7110750,
+        "expect":  7110750,
+        "sizeOk":  true,
+        "sha256":  "28481E6B1CCDBEA676BEB4DE8E6B6C921967DAEDA5A6D7E3992298EE4EC96EE9",
+        "curlExit":  0
+    }
+]

@@ -1,0 +1,5 @@
+﻿"01-官方原始包/version-pack.zip" filter=lfs diff=lfs merge=lfs -text
+"01-官方原始包/engine-multiplatform.zip" filter=lfs diff=lfs merge=lfs -text
+"01-官方原始包/client-android.apk" filter=lfs diff=lfs merge=lfs -text
+"01-官方原始包/client-pc.rar" filter=lfs diff=lfs merge=lfs -text
+"02-可直接运行的客户端/安卓端/client-gadget-v14.apk" filter=lfs diff=lfs merge=lfs -text

@@ -1,0 +1,265 @@
+/*
+ * lib/arm64-v8a/libhook.so ??Frida Gadget script payload (plain JS; the .so name
+ * is only a packaging trick so the Android package manager extracts it).
+ *
+ * Record every distinct XXTEA key, and dump Lua chunks as plaintext.
+ *
+ * This engine is LuaJIT: the luaL_loadbuffer* wrappers never fire, so we hook the
+ * lower-level entry points and pull the buffer out through the reader callback:
+ *
+ *   lua_loadx(lua_State *L, lua_Reader reader, void *ud, const char *name, const char *mode)
+ *   lua_load (lua_State *L, lua_Reader reader, void *ud, const char *name)
+ *
+ * The reader has signature  const char *reader(lua_State *L, void *ud, size_t *size)
+ * and is invoked here once, before the VM consumes the chunk.
+ *
+ * Output (readable over adb without root):
+ *   /sdcard/Android/data/com.fgcq.a143097/files/996key.txt
+ *   /sdcard/Android/data/com.fgcq.a143097/files/996chunks.txt
+ *   /sdcard/Android/data/com.fgcq.a143097/files/luadump/<n>_<size>.lua
+ */
+'use strict';
+
+var TAG = 'FRIDA996';
+var LIB = 'libMyGame.so';
+var BASE = '/sdcard/Android/data/com.fgcq.a143097/files';
+var KEYFILE = BASE + '/996key.txt';
+var CHUNKLOG = BASE + '/996chunks.txt';
+var DUMPDIR = BASE + '/luadump';
+
+/* Force the client onto our own LoginGate. The two source lines below appear in
+ * ModuleChooseLayer:RespModSrvlist and are replaced *in place* with replacements
+ * of exactly the same byte length, so no realloc and no size bookkeeping is
+ * needed (lengths verified against the dumped chunk):
+ *     "v.srvip           = v.i or v.srvip" (34) -> "v.srvip         = \"192.168.10.178\""  (34)
+ *     "v.port            = v.p or v.port"  (33) -> "v.port            = 7000" + spaces     (33)
+ */
+var LOCAL_IP = '192.168.10.178';
+var LOCAL_PORT = '7000';
+var LOCAL_GAME_PORT = '7110';
+
+function padTo(s, n) {
+  if (s.length > n) return null;
+  var out = s;
+  while (out.length < n) out += ' ';
+  return out;
+}
+
+/* NOTE: Frida's writeUtf8String appends a NUL terminator, and readUtf8String
+ * decodes UTF-8, so JS string indexes drift from byte offsets as soon as the
+ * chunk contains multi-byte characters (these Lua files are full of Chinese
+ * comments). Everything below therefore works on raw bytes only. */
+function strBytes(s) {
+  var out = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff;
+  return out;
+}
+
+function findBytes(hay, needle, from) {
+  outer:
+  for (var i = from || 0; i <= hay.length - needle.length; i++) {
+    for (var j = 0; j < needle.length; j++) {
+      if (hay[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+function patchLuaChunk(ptr, size, label) {
+  try {
+    if (size < 2000 || size > 8388608) return 0;
+
+    var specs = [
+      ['v.srvip           = v.i or v.srvip', 'v.srvip         = "' + LOCAL_IP + '"'],
+      ['v.port            = v.p or v.port', 'v.port            = ' + LOCAL_PORT],
+      ['v.proxyport       = v.x or v.proxyport', 'v.proxyport       = ' + LOCAL_PORT]
+    ];
+
+    var raw = new Uint8Array(ptr.readByteArray(size));
+    var applied = 0;
+
+    for (var i = 0; i < specs.length; i++) {
+      var from = specs[i][0];
+      var to = padTo(specs[i][1], from.length);
+      if (to === null) { appendLine(CHUNKLOG, '# patch too long: ' + specs[i][1]); continue; }
+      var pat = strBytes(from);
+      var rep = strBytes(to);
+      var idx = findBytes(raw, pat, 0);
+      while (idx >= 0) {
+        raw.set(rep, idx);
+        ptr.add(idx).writeByteArray(rep);
+        applied++;
+        idx = findBytes(raw, pat, idx + pat.length);
+      }
+    }
+
+    /* Second target: the "enter game" connection must reach RunGate (7110), not
+     * LoginGate. LoginProxy:RequestConnectGameServer computes
+     *     connectPort = tonumber(proxyport or port)
+     * exactly like the login path, so we anchor on the unique GetGameServerIP()
+     * line that only exists in the game path and patch the first port expression
+     * that follows it. */
+    var gameAnchor = strBytes('local ip          = self:GetGameServerIP() or self:GetSelectedServerIp()');
+    var apos = findBytes(raw, gameAnchor, 0);
+    if (apos >= 0) {
+      var portPat = strBytes('tonumber(proxyport or port)');
+      var portRep = strBytes(padTo('tonumber(' + LOCAL_GAME_PORT + ')', portPat.length));
+      var pip = findBytes(raw, portPat, apos);
+      if (pip >= 0 && portRep !== null) {
+        raw.set(portRep, pip);
+        ptr.add(pip).writeByteArray(portRep);
+        applied++;
+        appendLine(CHUNKLOG, '# PATCHED game-gate connect port -> ' + LOCAL_GAME_PORT);
+      }
+    }
+
+    if (applied) {
+      appendLine(CHUNKLOG, '# PATCHED ' + applied + ' srv line(s) in chunk(' + size + ') from=' + label);
+      console.log(TAG + ' patched ' + applied + ' srv line(s) -> ' + LOCAL_IP + ':' + LOCAL_PORT);
+    }
+    return applied;
+  } catch (e) {
+    appendLine(CHUNKLOG, '# patch err ' + e);
+    return 0;
+  }
+}
+
+var XTEA = {
+  xxtea_decrypt: 0xdc9cc4,
+  xxtea_decrypt_v2: 0xdca044,
+  xxtea_decrypt_v3: 0xdca3c4,
+  xxtea_decrypt_v4: 0xdca74c
+};
+/* name -> [offset, readerArgIndex, udArgIndex, nameArgIndex] */
+var LOADERS = {
+  lua_loadx: [0xae03b0, 1, 2, 3],
+  lua_load: [0xae0504, 1, 2, 3],
+  luaL_loadbufferx: [0xae0790, 1, -1, 3],   /* buffer-based variants */
+  luaL_loadbuffer: [0xae0844, 1, -1, 3]
+};
+var COCOS_LOADER = 0x7f98cc;
+
+var seenKeys = {};
+var chunkNo = 0;
+var dumped = 0;
+
+function emit(s) { console.log(TAG + ' ' + s); }
+
+function appendLine(path, line) {
+  try {
+    var f = new File(path, 'a');
+    f.write(line + '\n');
+    f.flush();
+    f.close();
+  } catch (e) { }
+}
+
+function hex16(p) {
+  var b = new Uint8Array(p.readByteArray(16)), s = '';
+  for (var i = 0; i < 16; i++) s += ('0' + b[i].toString(16)).slice(-2);
+  return s;
+}
+
+function hex8(p) {
+  var b = new Uint8Array(p.readByteArray(8)), s = '';
+  for (var i = 0; i < 8; i++) s += ('0' + b[i].toString(16)).slice(-2);
+  return s;
+}
+
+function ensureDir() {
+  try {
+    var f = new File(DUMPDIR + '/.keep', 'a');
+    f.write('');
+    f.close();
+    return true;
+  } catch (e) { return false; }
+}
+
+function saveChunk(ptr, size, label) {
+  chunkNo++;
+  var head = '';
+  try { head = hex8(ptr); } catch (e) { }
+  var path = DUMPDIR + '/' + chunkNo + '_' + size + '.lua';
+  try {
+    var f = new File(path, 'w');
+    f.write(ptr.readByteArray(size));
+    f.flush();
+    f.close();
+    dumped++;
+  } catch (e) { emit('dump fail ' + e); }
+  appendLine(CHUNKLOG, chunkNo + ' size=' + size + ' head=' + head + ' from=' + label);
+}
+
+function hookNative() {
+  var mod = Process.findModuleByName(LIB);
+  if (!mod) { setTimeout(hookNative, 150); return; }
+  emit('module ' + LIB + ' base=' + mod.base);
+  appendLine(CHUNKLOG, '# module base=' + mod.base);
+
+  Object.keys(XTEA).forEach(function (nm) {
+    try {
+      Interceptor.attach(mod.base.add(XTEA[nm]), {
+        onEnter: function (args) {
+          try {
+            var k = hex16(args[2]);
+            if (!seenKeys[k]) {
+              seenKeys[k] = nm;
+              emit('KEY ' + nm + ' ' + k);
+              appendLine(KEYFILE, nm + ' ' + k);
+            }
+          } catch (e) { }
+        }
+      });
+    } catch (e) { appendLine(CHUNKLOG, '# xtea hook fail ' + nm + ' ' + e); }
+  });
+
+  Object.keys(LOADERS).forEach(function (nm) {
+    var spec = LOADERS[nm];
+    try {
+      Interceptor.attach(mod.base.add(spec[0]), {
+        onEnter: function (args) {
+          try {
+            if (spec[1] === 1 && spec[2] === -1) {
+              // buffer-based: (L, buf, size, name)
+              var size = args[2].toInt32();
+              if (size > 0 && size <= 8388608) {
+                patchLuaChunk(args[1], size, nm);
+                saveChunk(args[1], size, nm);
+              }
+            } else {
+              // reader-based: pull the chunk through the reader callback
+              var reader = args[1];
+              var ud = args[2];
+              var sizePtr = Memory.alloc(8);
+              sizePtr.writeU64(0);
+              var fn = new NativeFunction(reader, 'pointer', ['pointer', 'pointer', 'pointer']);
+              var buf = fn(args[0], ud, sizePtr);
+              var sz = sizePtr.readU64().toNumber();
+              if (buf && !buf.isNull() && sz > 0 && sz <= 8388608) {
+                patchLuaChunk(buf, sz, nm);
+                saveChunk(buf, sz, nm);
+              }
+            }
+          } catch (e) { appendLine(CHUNKLOG, '# ' + nm + ' hook body err ' + e); }
+        }
+      });
+      appendLine(CHUNKLOG, '# hooked ' + nm + ' @ ' + mod.base.add(spec[0]));
+    } catch (e) { appendLine(CHUNKLOG, '# ' + nm + ' hook fail ' + e); }
+  });
+
+  try {
+    Interceptor.attach(mod.base.add(COCOS_LOADER), {
+      onEnter: function () { appendLine(CHUNKLOG, '# cocos2dx_lua_loader called'); }
+    });
+    appendLine(CHUNKLOG, '# hooked cocos2dx_lua_loader');
+  } catch (e) { appendLine(CHUNKLOG, '# cocos loader hook fail ' + e); }
+
+  emit('hooks ready');
+}
+
+ensureDir();
+hookNative();
+setInterval(function () {
+  emit('alive keys=' + Object.keys(seenKeys).length + ' chunks=' + chunkNo + ' dumped=' + dumped);
+}, 20000);

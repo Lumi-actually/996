@@ -1,0 +1,1 @@
+{"interaction":{"type":"script","path":"libhook.so"},"runtime":"qjs"}

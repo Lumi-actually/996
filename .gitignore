@@ -1,0 +1,12 @@
+# 只排除系统和编辑器产生的垃圾文件
+# 大文件（>100MB）通过 Git LFS 上传，见 .gitattributes
+
+Thumbs.db
+desktop.ini
+.DS_Store
+*.tmp
+*.log
+~$*
+
+__pycache__/
+*.pyc

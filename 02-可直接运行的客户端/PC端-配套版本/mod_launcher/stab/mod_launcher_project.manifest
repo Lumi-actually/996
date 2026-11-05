@@ -1,0 +1,25 @@
+{
+	"version":"3.40.1036",
+	"assets":{
+		"00f2c8abbde8fcf9722ada136fa95d52.zip":{"md5":"e4203f20d73e8bd91d209eaa59e8f14e", "compressed":true, "size":6255},
+		"199b1f561133b4e34909399198ea2e22.zip":{"md5":"579679b524f1a4f0164ae124fb057982", "compressed":true, "size":54785},
+		"1a1a1792d40eabb70d0ff4d038912625.zip":{"md5":"c66811a790daeabf648d082151054fc3", "compressed":true, "size":16846},
+		"2c6662f09ac3f2e5f4c2aa13bed1ddcb.zip":{"md5":"8294860cd4cf0b2b2c256024a1860cb3", "compressed":true, "size":3611},
+		"2c95d9085fca2c63585e3ced5f0e4783.zip":{"md5":"86882f37f7aa63a20b2281546ae226c7", "compressed":true, "size":9480289},
+		"3c796864860980620e0e1317c31bb75d.zip":{"md5":"e7e108715f38f126095a4dacfee9a1c3", "compressed":true, "size":283110},
+		"458f03452839234fd4b686704c0b16df.zip":{"md5":"7967adba96e5cc6a28bf541f9532cc04", "compressed":true, "size":587},
+		"4c61e1a455e7305dcf93d0f0c5f93574.zip":{"md5":"7cf9ffd93f6a66f17fd57117568b1e31", "compressed":true, "size":46503},
+		"5b62488fa793ab51c6a0d97c938db5f6.zip":{"md5":"ec58270035b122e153b2c4086d1906fb", "compressed":true, "size":4313},
+		"8376f05f462cc80434b01ace9de54316.zip":{"md5":"7666c661adc1ae1ca5963a3e6679d616", "compressed":true, "size":393},
+		"8e64e2259792a8d512b0b0f607981b75.zip":{"md5":"69b7ff362fb25e1f185973a72558b18f", "compressed":true, "size":1103440},
+		"994bd5af78c4ca0b85022484b6f0b0ad.zip":{"md5":"9b2d399af6b90a5a5040dff8cf28e18d", "compressed":true, "size":1580},
+		"b546d71c40a8ca02508e5eeb01ec289e.zip":{"md5":"0da0241bffd0603df9793c44592b8838", "compressed":true, "size":11077},
+		"c2d3b158fc28a9c7176544554cec71fe.zip":{"md5":"d6314da9ad51947cf7e34a0fa33c455d", "compressed":true, "size":14493},
+		"d9b3cf72e8c2a194f827acb00ac081a3.zip":{"md5":"d58e4cc427fc1eeef175a5759a38a518", "compressed":true, "size":145709},
+		"dc4f3e0af22bf4082328150bffb81157.zip":{"md5":"fbb82e085995d3e0f2863abe93c65887", "compressed":true, "size":196179},
+		"e478b70197be99a1294cdeb5fa5969fe.zip":{"md5":"50082285fe2d134b7773c8baaf57b970", "compressed":true, "size":10795},
+		"e6e3b41eae8283984a48ad906ff6befe.zip":{"md5":"fc74ef3e318834882d0c68a4b6aaeb07", "compressed":true, "size":41722},
+		"fd1d1c783869279137a06e05c95c3c7e.zip":{"md5":"caa6793ac31c20604bc06d8a9bd78c7a", "compressed":true, "size":321006}
+	},
+	"searchPaths" : []
+}
